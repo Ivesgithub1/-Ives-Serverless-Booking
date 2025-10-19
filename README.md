@@ -11,7 +11,7 @@ The entire workflow runs on an **AWS serverless architecture** — zero 
 
 | Component | URL |
 |------------|-----|
-| **Frontend** | [https://d21vgeeegf0a1d.cloudfront.net] | https://d21vgeeggf0a1d.cloudfront.net/
+| **Frontend** | d21vgeeggf0a1d.cloudfront.net
 | **Backend API (read‑only)** | [https://htqghe2vn0.execute-api.us-east-1.amazonaws.com/Prod/bookings/BKG-1760742249582](https://htqghe2vn0.execute-api.us-east-1.amazonaws.com/Prod/bookings/BKG-1760742249582) |
 
 > ⚠️ **Important:** CamPay’s “demo” environment still executes real mobile‑money transactions (capped at ≈ 100 FCFA).  
@@ -129,6 +129,7 @@ demo.campay.net with campay.net and update AWS Secrets Manager c
 🧑‍💻 Author
 Fru Ivo N.
 Cloud / Serverless Developer  |  Node.js  |  AWS  |  Payment Integrations
+
 
 
 
