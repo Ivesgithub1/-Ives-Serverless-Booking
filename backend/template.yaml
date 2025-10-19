@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless booking backend for ives@Travels
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 15
+    MemorySize: 256
+    Environment:
+      Variables:
+        BOOKINGS_TABLE: Bookings
+        CAMPAY_BASE_URL: https://campay.net/api/v2
+        SECRET_NAME: campay-creds
+
+Resources:
+
+  # ----------------------------------------------------------------------
+  # DynamoDB table for Bookings
+  # ----------------------------------------------------------------------
+  BookingTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Bookings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: bookingId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: bookingId
+          KeyType: HASH
+
+  # ----------------------------------------------------------------------
+  # API Gateway definition (global CORS enabled)
+  # ----------------------------------------------------------------------
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: BookingApi
+      StageName: Prod
+      Cors: "'*'"        # ⬅  simplest valid SAM syntax; allows all origins
+
+  # ----------------------------------------------------------------------
+  # Lambda Functions
+  # ----------------------------------------------------------------------
+
+  InitiateBookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: initiateBooking.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /bookings/initiate
+            Method: post
+
+  ConfirmBookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: confirmBooking.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingTable
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:campay-creds*
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /bookings/confirm
+            Method: post
+
+  CampayCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: campayCallback.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /payments/callback
+            Method: post
+
+  GetBookingStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: getBookingStatus.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BookingTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /bookings/{id}
+            Method: get
+
+  # ----------------------------------------------------------------------
+  # Catch‑All OPTIONS Lambda for CORS preflight (guaranteed 200)
+  # ----------------------------------------------------------------------
+  CorsOptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: corsOptions.handler
+      Runtime: nodejs20.x
+      Timeout: 5
+      Description: Responds to all OPTIONS requests with Access‑Control headers
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /{proxy+}
+            Method: options
+
+# ------------------------------------------------------------------------
+# Outputs
+# ------------------------------------------------------------------------
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint for the Prod stage
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  BookingsTable:
+    Description: DynamoDB table name
+    Value: !Ref BookingTable

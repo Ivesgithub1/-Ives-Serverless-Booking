@@ -1,0 +1,16 @@
+# Node and build artefacts
+node_modules/
+.aws-sam/
+*.log
+
+# Environment / secrets
+samconfig.toml
+.env
+*.env
+*.pem
+*.key
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
